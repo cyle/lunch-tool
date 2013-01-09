@@ -1,0 +1,52 @@
+* {
+	padding: 0;
+	margin: 0;
+}
+
+body {
+	font-family: Helvetica, Arial, sans-serif;
+	font-size: 14px;
+}
+
+body > div {
+	margin: 20px 50px;
+}
+
+@media only screen and (max-width: 480px) {  
+	body > div {
+		margin: 15px;
+	}  
+}
+
+h1 {
+	font-size: 3em;
+}
+
+table {
+	margin: 7px 0;
+}
+
+table th, table td {
+	padding-right: 10px;
+}
+
+table th {
+	text-align: left;
+}
+
+div#final-result {
+	background-color: #000;
+	color: #fff;
+	border-radius: 4px;
+	padding: 10px;
+	font-size: 2em;
+}
+
+div#footer {
+	font-size: 10px;
+	color: #aaa;
+}
+
+p.weather-recommend {
+	font-style: italic;
+}
