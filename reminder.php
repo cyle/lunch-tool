@@ -7,9 +7,9 @@ require_once('includes/dbconn.php');
 // get people to send a reminder to
 // people who have not voted today!
 $mail_people = array();
-$get_mail_people = $mysqli->query('SELECT ecnet FROM users WHERE id NOT IN (SELECT uid FROM votes WHERE lunchdate=CURDATE())');
+$get_mail_people = $mysqli->query('SELECT username FROM users WHERE id NOT IN (SELECT uid FROM votes WHERE lunchdate=CURDATE())');
 while ($mail_row = $get_mail_people->fetch_assoc()) {
-	$mail_people[] = strtolower(trim($mail_row['ecnet'])).'@whatever.com';
+	$mail_people[] = strtolower(trim($mail_row['username'])).'@whatever.com';
 }
 
 if (count($mail_people) == 0) {

@@ -4,11 +4,15 @@ Organizing lunch for a group of people in multiple offices across campus is anno
 
 So I built this tool to do it for us. This system is simply a voting system. We always eat lunch at noon. Voting opens at 9am every day. Everyone gets a reminder via email at 11am to vote, if they haven't already. At 11:45am it sends out another email to everyone with the result of the vote. That's it!
 
-It sounds simple, but it's amazingly effective. Voting is anonymous, so nobody can blame anyone for the end result. The page even tries to scrape weather data from Google to help figure out whether it's even a good idea to eat outside.
+It sounds simple, but it's amazingly effective. Voting is anonymous, so nobody can blame anyone for the end result. The page even tries to use the World Weather Online API to help figure out whether it's even a good idea to eat outside. (You will need to get an API key from them to use it.)
+
+There's basic commenting functionality, as well as the ability to show off where you're gonna go get something to eat.
+
+See the CHANGELOG.md file for info on updates.
 
 ## Notes
 
-I coded this for my coworkers at Emerson College, so it has a lot of Emerson-isms about it. For example, the username field in the database is "ecnet", which is synonymous with username.
+I coded this for my coworkers at Emerson College, so it has a lot of Emerson-isms about it.
 
 The email it generates to remind people to vote is from "Cylebot", which is what I put at the end of all of my automated emails. You might want to change that, but whatever.
 
@@ -33,6 +37,10 @@ Also, most importantly, this system requires a login system, referenced as "logi
 ## Installing
 
 Put it anywhere, really. Run the included SQL file to set up the database tables.
+
+In `index.php`, set the `$here_zipcode` and `$weather_api_key` variables, too.
+
+You should populate the `destinations` table in the database with some local eateries.
 
 There are two cron jobs which send the two emails, so you'll need to set those up on your server. One runs at 11:00am to run "reminder.php" and the other runs at 11:45am to run "result.php".
 

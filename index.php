@@ -6,6 +6,7 @@ require_once('login_check.php');
 require_once('includes/dbconn.php');
 
 $here_zipcode = '02116'; // where are we? this will be used to get weather data
+$weather_api_key = 'your-api-key-here'; // our API key for worldweatheronline.com
 
 /*
 
@@ -34,7 +35,7 @@ if ($get_vote_results->num_rows > 0) {
 	}
 }
 
-
+$possible_bar_colors = array('#999', 'red', 'blue', 'green', 'black', 'orange', '#43305E', '#5C2E10', '#546F2E', '#C01056', '#F05E7F', '#FF6050');
 
 ?>
 <!DOCTYPE html>
@@ -55,29 +56,32 @@ if ($get_vote_results->num_rows > 0) {
 	<div>
 		<?php
 		// load weather
-		$weather = @simplexml_load_file('http://www.google.com/ig/api?weather='.$here_zipcode);
-		//echo '<pre>'.print_r($weather, true).'</pre>';
-		if (isset($weather->weather)) {
-			$weather_now = $weather->weather->current_conditions->condition['data'];
-			$weather_temp = $weather->weather->current_conditions->temp_f['data'];
-			$weather_high = $weather->weather->forecast_conditions[0]->high['data'];
-			$weather_today = $weather->weather->forecast_conditions[0]->condition['data'];
-			?>
-			<p>Current weather: <?php echo $weather_now; ?>, <?php echo $weather_temp; ?> degrees.</p>
-			<p>High of <?php echo $weather_high; ?> degrees expected.</p>
-			<?php
-			if (preg_match('/(rain|thunderstorm|snow|showers)/i', $weather_today)) {
-				echo '<p class="weather-recommend">It\'s supposed to rain, eat inside.</p>';
-			} else if ($weather_temp >= 68 && $weather_temp <= 82 && preg_match('/(clear|sunny|overcast|cloudy)/i', $weather_today)) {
-				echo '<p class="weather-recommend">I think you should eat outside!</p>';
-			} else if ($weather_temp > 82) {
-				echo '<p class="weather-recommend">It\'s too damn hot out.</p>';
-			} else if ($weather_temp < 65) {
-				echo '<p class="weather-recommend">It\'s too damn cold out.</p>';
-			}
-			
+		$weather_url = 'http://api.worldweatheronline.com/free/v1/weather.ashx?q='.$here_zipcode.'&format=json&num_of_days=1&key='.$weather_api_key;
+		$weather_http_options = array('http' => array('timeout' => 1));
+		$weather_ctx = stream_context_create($weather_http_options);
+		$weather_content = @file_get_contents($weather_url, false, $weather_ctx);
+		if ($weather_content == false || trim($weather_content) == '') {
+			echo '<p>Could not retrieve weather data, sorry. Go to <a href="http://weatherspark.com/#!dashboard;q='.$here_zipcode.'" target="_blank">Weatherspark</a> and check it out.</p>';
 		} else {
-			echo '<p>Cannot get weather info, sorry. Try refreshing.</p>';
+			$weather_data = json_decode($weather_content, true);
+			if (is_array($weather_data)) {
+				//echo '<pre>'.print_r($weather_data, true).'</pre>';
+				$weather_temp = $weather_data['data']['weather'][0]['tempMaxF'] * 1;
+				$weather_today = strtolower($weather_data['data']['weather'][0]['weatherDesc'][0]['value']);
+				echo '<p>Current info: '.$weather_data['data']['current_condition'][0]['temp_F'].'&deg;, '.$weather_data['data']['current_condition'][0]['weatherDesc'][0]['value'].'</p>';
+				echo '<p>Today\'s info: High of '.$weather_data['data']['weather'][0]['tempMaxF'].'&deg;, '.$weather_data['data']['weather'][0]['weatherDesc'][0]['value'].'</p>';
+				if (preg_match('/(rain|thunderstorm|snow|showers)/i', $weather_today)) {
+					echo '<p class="weather-recommend">It\'s supposed to rain, eat inside.</p>';
+				} else if ($weather_temp >= 68 && $weather_temp <= 82 && preg_match('/(clear|sunny|overcast|cloudy)/i', $weather_today)) {
+					echo '<p class="weather-recommend">I think you should eat outside!</p>';
+				} else if ($weather_temp > 82) {
+					echo '<p class="weather-recommend">It\'s too damn hot out.</p>';
+				} else if ($weather_temp < 65) {
+					echo '<p class="weather-recommend">It\'s too damn cold out.</p>';
+				}
+			} else {
+				echo '<p>Could not parse weather data, sorry. Go to <a href="http://weatherspark.com/#!dashboard;q='.$here_zipcode.'" target="_blank">Weatherspark</a> and check it out.</p>';
+			}
 		}
 		?>
 	</div>
@@ -95,7 +99,7 @@ if ($get_vote_results->num_rows > 0) {
 			
 			// show big result
 			if (count($all_results) > 0) {
-				if ($all_results[0]['votecount'] == $all_results[1]['votecount']) {
+				if (isset($all_results[0]) && isset($all_results[1]) && $all_results[0]['votecount'] == $all_results[1]['votecount']) {
 					echo '<div id="final-result"><p>Final result: <b>A tie, lol.</b></p></div>';
 				} else {
 					$top_result = $all_results[0];
@@ -130,13 +134,22 @@ if ($get_vote_results->num_rows > 0) {
 			foreach ($all_results as $vote_result) {
 				$get_vote_option = $mysqli->query('SELECT optiontxt FROM vote_options WHERE id='.$vote_result['oid']);
 				$vote_option = $get_vote_option->fetch_assoc();
-				echo '<tr><td>'.$vote_option['optiontxt'].'</td><td style="width:100px;"><div style="background-color:#999;width:'.(($vote_result['votecount']/$total_votes) * 100).'%">&nbsp;</div></td><td>'.$vote_result['votecount'].'</td></tr>'."\n";
+				echo '<tr><td>'.$vote_option['optiontxt'].'</td><td style="width:100px;"><div style="background-color:'.$possible_bar_colors[array_rand($possible_bar_colors)].';width:'.(($vote_result['votecount']/$total_votes) * 100).'%">&nbsp;</div></td><td>'.$vote_result['votecount'].'</td></tr>'."\n";
 			}
 			echo '</table>'."\n";
 		} else {
 			echo '<p>Ooops, nobody has voted.</p>';
 		}
 		?>
+		<p>And where should you get food? Do you even have to get food? Spin the wheel.</p>
+		<form action="getting_food_at.php" method="post">
+		<p id="random-destination-form"><input type="button" value="Pick Random Eatery" id="get-random-destination-btn" /> <select name="eatery_id" id="random-destination-list"><?php
+		$get_eateries = $mysqli->query('SELECT * FROM destinations ORDER BY name ASC');
+		while ($eatery = $get_eateries->fetch_assoc()) {
+			echo '<option value="'.$eatery['id'].'">'.$eatery['name'].'</option>'."\n";
+		}
+		?></select> <input type="submit" value="I'm getting food from here!" id="random-destination-choice" /></p>
+		</form>
 	</div>
 	<?php
 	
@@ -163,10 +176,48 @@ if ($get_vote_results->num_rows > 0) {
 	} // end if time for voting stuff
 	?>
 	
+	<div>
+	<p><b>Comments</b> (Latest first, cleared every day.)</p>
+	<div id="comments-list">
+	<?php
+	
+	$get_todays_comments = $mysqli->query('SELECT commenting.*, users.username FROM commenting LEFT JOIN users ON users.id=commenting.uid WHERE thedate=CURDATE() ORDER BY tsc DESC');
+	if ($get_todays_comments->num_rows > 0) {
+		while ($comment = $get_todays_comments->fetch_assoc()) {
+			?>
+			<div class="comment">
+			<p><span class="comment-timestamp"><?php echo date('h:iA', $comment['tsc']); ?></span> <b><?php echo $comment['username']; ?></b>: <?php echo $comment['thecomment']; ?></p>
+			</div>
+			<?php
+		}
+	} else {
+		?>
+		<p>There are no comments to display today.</p>
+		<?php
+	}
+	?>
+	</div>
+	<div>
+	<form action="add_comment.php" method="post" id="new-comment-form">
+	<p>Add a comment:</p>
+	<textarea name="c"></textarea>
+	<p><input type="submit" value="add comment" /></p>
+	</form>
+	</div>
+	</div>
 	
 	<div id="footer">
-		<p>Built by Cyle. Version 1.0</p>
+		<p>Built by Cyle. Version 2.1</p>
 	</div>
-
+	
+<script type="text/javascript">
+document.getElementById('get-random-destination-btn').addEventListener('click', getRandomDestination);
+function getRandomDestination() {
+	var eateries = document.getElementById('random-destination-list');
+	var number_of_options = eateries.options.length;
+	var random_index = Math.floor(Math.random()*number_of_options);
+	eateries.selectedIndex = random_index;
+}
+</script>
 </body>
 </html>
